@@ -6,10 +6,32 @@ PG_LOG=/var/log/pgbouncer
 PG_CONFIG_DIR=/etc/pgbouncer
 PG_USER=postgres
 
-if [ ! -f ${PG_CONFIG_DIR}/pgbouncer.ini ]; then
+if [[ ! -f ${PG_CONFIG_DIR}/pgbouncer.ini ]]; then
   echo "create pgbouncer config in ${PG_CONFIG_DIR}"
   mkdir -p ${PG_CONFIG_DIR}
-
+  databases=""
+  unset IFS
+  for var in $(compgen -e); do
+    if [[ ${var} == *"DATABASE"* ]]; then
+        password="${var//DATABASE}PASSWORD"
+        user="${var//DATABASE}USER"
+        if [[ -z "${!password}" ]]
+        then
+            echo "Missing Password for database ${!var}"
+            exit -1
+        fi
+        if [[ -z "${!user}" ]]
+        then
+            echo "Missing User for database ${!var}"
+            exit -1
+        fi
+        db_password=${!password}
+        databases="${databases}* = host=${DB_HOST:?"Setup pgbouncer config error! You must set DB_HOST env"} \
+                   port=${DB_PORT:-5432} user=${!user} \
+                   dbname=${!var} \
+                   ${db_password:+password=${db_password}}\n"
+    fi
+   done
   printf "\
 #pgbouncer.ini
 # Description
@@ -17,9 +39,7 @@ if [ ! -f ${PG_CONFIG_DIR}/pgbouncer.ini ]; then
 # Lines starting with “;” or “#” are taken as comments and ignored.
 # The characters “;” and “#” are not recognized when they appear later in the line.
 [databases]
-* = host=${DB_HOST:?"Setup pgbouncer config error! You must set DB_HOST env"} \
-port=${DB_PORT:-5432} user=${DB_USER:-postgres} \
-${DB_PASSWORD:+password=${DB_PASSWORD}}
+${databases}
 
 [pgbouncer]
 # Generic settings

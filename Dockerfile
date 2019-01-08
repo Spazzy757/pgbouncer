@@ -21,8 +21,8 @@ RUN make install
 RUN ls -R /pgbouncer
 
 FROM alpine:latest
-RUN apk --update add libevent openssl c-ares
+RUN apk --update add libevent openssl c-ares bash
 WORKDIR /
 COPY --from=build_stage /pgbouncer /pgbouncer
 ADD entrypoint.sh ./
-ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["bash", "./entrypoint.sh"]
